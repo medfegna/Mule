@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 
 void main() {
   runApp(const MuleApp());
@@ -38,7 +39,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
   int currentPage = 1;
   int totalPages = 500;
 
-  // የተተረጎመውን ጽሁፍ በስክሪኑ ላይ ለማሳየት የተቀመጠ ናሙና
   List<String> translatedPages = List.generate(
     500,
     (index) => "ገጽ ${index + 1}\n\n"
@@ -56,6 +56,33 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     'ፈረንሳይኛ (French)',
     'አረብኛ (Arabic)',
   ];
+
+  // እውነተኛውን ፋይል ከስልክ ማከማቻ የመምረጫ ሎጂክ
+  Future<void> _pickDocument() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt'],
+      );
+
+      if (result != null) {
+        setState(() {
+          selectedFileName = result.files.single.name;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('ፋይሉ ተመርጧል: ${result.files.single.name}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ፋይል በመምረጥ ላይ ስህተት ተፈጥሯል: $e')),
+        );
+      }
+    }
+  }
 
   void startTranslation() async {
     setState(() {
@@ -76,7 +103,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ትርጉሙ በተሳካ ሁኔታ ተጠናቋል! ከታች ማየት ይችላሉ።')),
+        const SnackBar(content: Text('ትርጉሙ በተሳካ ሁኔታ ተጠናቋል!')),
       );
     }
   }
@@ -111,11 +138,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                     ),
                     const SizedBox(height: 12),
                     ElevatedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          selectedFileName = ' sample_500_pages_document.pdf (500 ገጾች)';
-                        });
-                      },
+                      onPressed: _pickDocument,
                       icon: const Icon(Icons.folder_open),
                       label: const Text('ሰነድ ይምረጡ (PDF, Word, TXT)'),
                     ),
@@ -189,7 +212,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade400),
                 borderRadius: BorderRadius.circular(8),
-                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
               ),
               padding: const EdgeInsets.all(16),
               child: Column(
