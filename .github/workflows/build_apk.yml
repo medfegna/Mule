@@ -2,11 +2,14 @@ name: Build Flutter APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,11 +23,15 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x'
+          flutter-version: '3.16.x'
           channel: 'stable'
+          cache: true
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Generate Android scaffolding if missing
+        run: flutter create . --platforms=android
 
       - name: Build APK
         run: flutter build apk --release
