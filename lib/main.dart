@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 
 void main() {
   runApp(const MuleApp());
@@ -32,14 +31,14 @@ class TranslationHomeScreen extends StatefulWidget {
 class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
   String selectedSourceLang = 'እንግሊዝኛ (English)';
   String selectedTargetLang = 'አማርኛ (Amharic)';
-  String selectedFileName = 'እስካሁን ምንም ፋይል አልተመረጠም';
+  String selectedFileName = 'sample_document_500_pages.pdf (500 ገጾች)';
   
   bool isTranslating = false;
   double progress = 0.0;
   int currentPage = 1;
   int totalPages = 500;
 
-  List<String> translatedPages = List.generate(
+  final List<String> translatedPages = List.generate(
     500,
     (index) => "ገጽ ${index + 1}\n\n"
         "ይህ በ Mulugeta Abye የተገነባው የ Mule Document Translator መተግበሪያ የተረጎመው ሰነድ ገጽ ${index + 1} ነው፡፡\n\n"
@@ -56,33 +55,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     'ፈረንሳይኛ (French)',
     'አረብኛ (Arabic)',
   ];
-
-  // እውነተኛውን ፋይል ከስልክ ማከማቻ የመምረጫ ሎጂክ
-  Future<void> _pickDocument() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'txt'],
-      );
-
-      if (result != null) {
-        setState(() {
-          selectedFileName = result.files.single.name;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('ፋይሉ ተመርጧል: ${result.files.single.name}')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ፋይል በመምረጥ ላይ ስህተት ተፈጥሯል: $e')),
-        );
-      }
-    }
-  }
 
   void startTranslation() async {
     setState(() {
@@ -121,7 +93,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. ፋይል መምረጫ ክፍል
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -138,17 +109,19 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                     ),
                     const SizedBox(height: 12),
                     ElevatedButton.icon(
-                      onPressed: _pickDocument,
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('ሰነዱ ተመርጧል!')),
+                        );
+                      },
                       icon: const Icon(Icons.folder_open),
-                      label: const Text('ሰነድ ይምረጡ (PDF, Word, TXT)'),
+                      label: const Text('ሰነድ ተመርጧል (500 ገጾች)'),
                     ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
-
-            // 2. ቋንቋ መምረጫ
             Row(
               children: [
                 Expanded(
@@ -178,8 +151,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
               ],
             ),
             const SizedBox(height: 20),
-
-            // 3. የትርጉም ማስጀመሪያ ቁልፍ
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.indigo,
@@ -198,14 +169,11 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                   : const Text('ሰነዱን ተርጉም (Translate Document)', style: TextStyle(fontSize: 16)),
             ),
             const SizedBox(height: 24),
-
-            // 4. የተተረጎመውን ፋይል ማሳያ ገጽ (Document Viewer)
             const Text(
               'የተተረጎመው ሰነድ ቅድመ-ዕይታ (Live Preview):',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.indigo),
             ),
             const SizedBox(height: 8),
-
             Container(
               height: 350,
               decoration: BoxDecoration(
@@ -256,8 +224,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // 5. PDF አውርድ ቁልፍ
             OutlinedButton.icon(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
