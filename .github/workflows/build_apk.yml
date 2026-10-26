@@ -31,7 +31,7 @@ jobs:
         run: flutter pub get
 
       - name: Generate Android scaffolding if missing
-        run: flutter create . --platforms=android
+        run: flutter create . --platforms=android --project-name=mule
 
       - name: Build APK
         run: flutter build apk --release
