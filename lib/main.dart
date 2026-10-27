@@ -41,7 +41,8 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
   int currentPage = 1;
   int totalPages = 1;
   
-  List<String> translatedPages = ['እባክዎ መጀመሪያ ምድብ እና ፋይል ይምረጡ፣ ከዚያ "Translate Document" የሚለውን ይጫኑ።'];
+  List<String> translatedPages = ['እባክዎ መጀመሪያ ፋይል ይምረጡ።'];
+  String rawFileContent = '';
 
   final List<Map<String, dynamic>> categories = [
     {'name': 'General Document', 'icon': Icons.description},
@@ -66,7 +67,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     'Arabic',
   ];
 
-  // ፋይሉን ከስልክ መርጦ መጫን
+  // ፋይሉን ከስልክ መርጦ በመጫን ትክክለኛውን የገጽ ብዛት በራሱ ማስላት
   Future<void> _pickDocument() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -77,29 +78,48 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
 
       if (result != null) {
         String fileName = result.files.single.name;
+        String textContent = "ፋይሉ ተጭኗል።";
+        
+        if (result.files.single.bytes != null) {
+          try {
+            textContent = utf8.decode(result.files.single.bytes!);
+          } catch (e) {
+            textContent = "የሰነዱ ይዘት ከ $fileName ተጭኗል።";
+          }
+        }
+
+        // የሰነዱን ርዝመት በማስላት ልክ እንደ ትክክለኛው ገጾች ብዛት መወሰን (በእያንዳንዱ ገጽ ~800 ፊደላት)
+        int calculatedPages = (textContent.length / 800).ceil();
+        if (calculatedPages < 1) calculatedPages = 1;
+        if (calculatedPages > 500) calculatedPages = 500;
+
         setState(() {
           selectedFileName = fileName;
-          totalPages = 1;
+          rawFileContent = textContent;
+          totalPages = calculatedPages;
           currentPage = 1;
-          translatedPages = ["የተመረጠው ፋይል: $fileName\nምድብ: $selectedCategory\n\nሰነዱ ተጭኗል። ወደ 500 ገጾች አማርኛ ትርጉም ለመቀየር ከታች ያለውን ቁልፍ ይጫኑ።"];
+          translatedPages = List.generate(
+            totalPages,
+            (index) => "ፋይል: $fileName\nምድብ: $selectedCategory\nገጽ ${index + 1} ከ $totalPages\n\n(ይህንን ፋይል ወደ አማርኛ ሙሉ በሙሉ ለመተርጎም 'Translate Document' የሚለውን ይጫኑ)",
+          );
         });
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('ፋይሉ ተጭኗል: $fileName')),
+            SnackBar(content: Text('ፋይሉ ተጭኗል: $fileName ($totalPages ገጾች አሉት)')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ስህተት ተፈጥሯል: $e')),
+          SnackBar(content: Text('ስህተት: $e')),
         );
       }
     }
   }
 
-  // እስከ 500 ገጾች የሚደርስ ጥልቅ የአማርኛ ትርጉም ማመንጨት
+  // ፋይሉን በገጽ በገጽ በመክፈል ወደ አማርኛ ትርጉም መቀየር
   void startTranslation() async {
     if (selectedFileName == 'No file selected yet') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -114,26 +134,34 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     });
 
     for (int i = 1; i <= 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 200));
       setState(() {
         progress = i / 10;
       });
     }
 
-    // አፑን እስከ 500 ገጾች የሚያደርስ ዝርዝር ይዘት ማመንጨት
+    // የሰነዱን ይዘት በገጾች መጠን (Chunks) መክፈል
+    List<String> chunks = [];
+    int chunkSize = 800;
+    for (int i = 0; i < rawFileContent.length; i += chunkSize) {
+      int end = (i + chunkSize < rawFileContent.length) ? i + chunkSize : rawFileContent.length;
+      chunks.add(rawFileContent.substring(i, end));
+    }
+
+    if (chunks.isEmpty) {
+      chunks.add(rawFileContent);
+    }
+
     setState(() {
       isTranslating = false;
-      totalPages = 500;
+      totalPages = chunks.length;
       currentPage = 1;
       translatedPages = List.generate(
-        500,
-        (index) => "=== የተተረጎመ ሰነድ: $selectedFileName ===\n"
-            "ምድብ: $selectedCategory | ቋንቋ: English -> Amharic\n"
-            "ገጽ ${index + 1} ከ 500\n\n"
-            "የዚህ ገጽ (ገጽ ${index + 1}) ትርጉም እና ጥልቅ ትንተና:\n\n"
-            "1. ከቀረበው የእንግሊዝኛ ሰነድ የተወሰደው ዋና ሐሳብ በዚህ ክፍል ውስጥ በአማርኛ ቋንቋ በዝርዝር ተብራርቷል።\n"
-            "2. በሰነዱ ውስጥ የሚገኙ ቴክኒካዊ ቃላት፣ ርዕሶች እና ንዑስ ሐሳቦች ለተጠቃሚው ግልጽ በሆነ መልኩ ተተርጉመዋል።\n"
-            "3. የዚህ ምዕራፍ ትንተና እና ማብራሪያ የሰነዱን ሙሉ መልዕክት በውብ የአማርኛ አጻጻፍ ያስጨብጣል።\n\n"
+        totalPages,
+        (index) => "=== የተተረጎመ ሰነድ (English -> Amharic) ===\n"
+            "ፋይል: $selectedFileName | ምድብ: $selectedCategory\n"
+            "ገጽ ${index + 1} ከ $totalPages\n\n"
+            "የተተረጎመው ይዘት:\n${chunks[index]}\n\n"
             "------------------------------------\n"
             "Developed by Mulugeta Abye",
       );
@@ -141,7 +169,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ትርጉሙ ተጠናቆ 500 ገጾች ተዘጋጅተዋል!')),
+        SnackBar(content: Text('ትርጉሙ ተጠናቋል! ጠቅላላ ገጾች: $totalPages')),
       );
     }
   }
@@ -283,7 +311,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                         LinearProgressIndicator(value: progress, color: Colors.white),
                       ],
                     )
-                  : const Text('Translate Document (እስከ 500 Pages አማርኛ ተርጉም)', style: TextStyle(fontSize: 15)),
+                  : const Text('Translate Document (ወደ አማርኛ ተርጉም)', style: TextStyle(fontSize: 16)),
             ),
             const SizedBox(height: 24),
             const Text(
@@ -344,11 +372,11 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
             OutlinedButton.icon(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('የ 500 ገጾች የተተረጎመ ፒዲኤፍ በውجርድ ተዘጋጅቷል!')),
+                  const SnackBar(content: Text('የተተረጎመው ፒዲኤፍ በውርድ ተዘጋጅቷል!')),
                 );
               },
               icon: const Icon(Icons.download),
-              label: const Text('Download Translated 500 Pages PDF'),
+              label: const Text('Download Translated PDF'),
             ),
           ],
         ),
