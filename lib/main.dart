@@ -37,7 +37,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
   bool isTranslating = false;
   double progress = 0.0;
   int currentPage = 1;
-  int totalPages = 1;
+  int totalPages = 500;
   
   List<String> translatedPages = ['እባክዎ መጀመሪያ ፋይል ይምረጡ እና "ሰነዱን ተርጉም" የሚለውን ይጫኑ።'];
 
@@ -64,13 +64,13 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
         String fileName = result.files.single.name;
         setState(() {
           selectedFileName = fileName;
-          totalPages = 500; // እስከ 500 ገጾች ድጋፍ
+          totalPages = 500;
           translatedPages = List.generate(
             500,
-            (index) => "የተመረጠው ፋይል: $fileName\n\n"
+            (index) => "የተመረጠው ሰነድ: $fileName\n\n"
                 "ገጽ ${index + 1} ከ 500\n\n"
                 "ይህ የሰነዱ ክፍል በተመረጠው ቋንቋ ($selectedTargetLang) ሙሉ በሙሉ ተተርጉሟል።\n"
-                "የሰነዱ ይዘት በትክክል ተነቦ ለትርጉም ዝግጁ ሆኗል።",
+                "የባለቤትነት ማረጋገጫ: Developed by Mulugeta Abye",
           );
         });
         if (mounted) {
