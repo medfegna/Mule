@@ -11,27 +11,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.19.0'
           channel: 'stable'
       - name: Create Android Platform
         run: flutter create . --platforms=android --project-name=mule
-      - name: Fix Kotlin Version with Python
-        run: |
-          python3 -c '
-          import glob
-          for path in glob.glob("android/**/settings.gradle", recursive=True):
-              with open(path, "r") as f:
-                  content = f.read()
-              content = content.replace("1.7.1", "1.9.0").replace("1.8.22", "1.9.0")
-              with open(path, "w") as f:
-                  f.write(content)
-          for path in glob.glob("android/**/build.gradle", recursive=True):
-              with open(path, "r") as f:
-                  content = f.read()
-              content = content.replace("1.7.1", "1.9.0").replace("1.8.22", "1.9.0")
-              with open(path, "w") as f:
-                  f.write(content)
-          '
       - name: Build APK
         run: flutter build apk --release
       - name: Upload APK Artifact
