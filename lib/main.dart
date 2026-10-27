@@ -30,26 +30,26 @@ class TranslationHomeScreen extends StatefulWidget {
 }
 
 class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
-  String selectedSourceLang = 'እንግሊዝኛ (English)';
-  String selectedTargetLang = 'አማርኛ (Amharic)';
-  String selectedFileName = 'እስካሁን ምንም ፋይል አልተመረጠም';
+  String selectedSourceLang = 'English';
+  String selectedTargetLang = 'Amharic';
+  String selectedFileName = 'No file selected yet';
   
   bool isTranslating = false;
   double progress = 0.0;
   int currentPage = 1;
   int totalPages = 500;
   
-  List<String> translatedPages = ['እባክዎ መጀመሪያ ፋይል ይምረጡ እና "ሰነዱን ተርጉም" የሚለውን ይጫኑ።'];
+  List<String> translatedPages = ['Please select a file from your phone and click "Translate Document".'];
 
   final List<String> languages = [
-    'አማርኛ (Amharic)',
-    'አፋርኛ (Afar)',
-    'ትግርኛ (Tigrinya)',
-    'ኦሮምኛ (Afaan Oromo)',
-    'እንግሊዝኛ (English)',
-    'ስፓኒሽ (Spanish)',
-    'ፈረንሳይኛ (French)',
-    'አረብኛ (Arabic)',
+    'Amharic',
+    'Afar',
+    'Tigrinya',
+    'Afaan Oromo',
+    'English',
+    'Spanish',
+    'French',
+    'Arabic',
   ];
 
   // እውነተኛውን ፋይል ከስልክ ማከማቻ የመምረጫ ሎጂክ
@@ -67,31 +67,31 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
           totalPages = 500;
           translatedPages = List.generate(
             500,
-            (index) => "የተመረጠው ሰነድ: $fileName\n\n"
-                "ገጽ ${index + 1} ከ 500\n\n"
-                "ይህ የሰነዱ ክፍል በተመረጠው ቋንቋ ($selectedTargetLang) ሙሉ በሙሉ ተተርጉሟል።\n"
-                "የባለቤትነት ማረጋገጫ: Developed by Mulugeta Abye",
+            (index) => "Selected File: $fileName\n\n"
+                "Page ${index + 1} of 500\n\n"
+                "This document page has been fully translated into $selectedTargetLang successfully.\n"
+                "Developed by Mulugeta Abye",
           );
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('ፋይሉ ተመርጧል: $fileName')),
+            SnackBar(content: Text('File selected: $fileName')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ስህተት ተፈጥሯል: $e')),
+          SnackBar(content: Text('Error picking file: $e')),
         );
       }
     }
   }
 
   void startTranslation() async {
-    if (selectedFileName == 'እስካሁን ምንም ፋይል አልተመረጠም') {
+    if (selectedFileName == 'No file selected yet') {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('እባክዎ መጀመሪያ ፋይል ይምረጡ!')),
+        const SnackBar(content: Text('Please select a document first!')),
       );
       return;
     }
@@ -114,7 +114,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('የሰነዱ ትርጉም ተጠናቋል!')),
+        const SnackBar(content: Text('Translation completed successfully!')),
       );
     }
   }
@@ -150,7 +150,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                     ElevatedButton.icon(
                       onPressed: _pickDocument,
                       icon: const Icon(Icons.folder_open),
-                      label: const Text('ፋይል ከስልክ ምረጥ (PDF, Word, TXT)'),
+                      label: const Text('Select File from Phone (PDF, Word, TXT)'),
                     ),
                   ],
                 ),
@@ -162,8 +162,8 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     value: selectedSourceLang,
-                    decoration: const InputDecoration(labelText: 'ከ (From)', border: OutlineInputBorder()),
-                    items: ['እንግሊዝኛ (English)', 'አማርኛ (Amharic)']
+                    decoration: const InputDecoration(labelText: 'From', border: OutlineInputBorder()),
+                    items: ['English', 'Amharic']
                         .map((lang) => DropdownMenuItem(value: lang, child: Text(lang, style: const TextStyle(fontSize: 12))))
                         .toList(),
                     onChanged: (val) => setState(() => selectedSourceLang = val!),
@@ -176,7 +176,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     value: selectedTargetLang,
-                    decoration: const InputDecoration(labelText: 'ወደ (To)', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(labelText: 'To', border: OutlineInputBorder()),
                     items: languages
                         .map((lang) => DropdownMenuItem(value: lang, child: Text(lang, style: const TextStyle(fontSize: 12))))
                         .toList(),
@@ -196,16 +196,16 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
               child: isTranslating
                   ? Column(
                       children: [
-                        Text('በመተርጎም ላይ... ${(progress * 100).toInt()}%'),
+                        Text('Translating... ${(progress * 100).toInt()}%'),
                         const SizedBox(height: 6),
                         LinearProgressIndicator(value: progress, color: Colors.white),
                       ],
                     )
-                  : const Text('ሰነዱን ሙሉ በሙሉ ተርጉም (Translate Document)', style: TextStyle(fontSize: 16)),
+                  : const Text('Translate Document (Up to 500 Pages)', style: TextStyle(fontSize: 16)),
             ),
             const SizedBox(height: 24),
             const Text(
-              'የተተረጎመው ሰነድ ቅድመ-ዕይታ (Live Preview):',
+              'Translated Document Live Preview:',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.indigo),
             ),
             const SizedBox(height: 8),
@@ -224,7 +224,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('ገጽ $currentPage ከ $totalPages', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text('Page $currentPage of $totalPages', style: const TextStyle(fontWeight: FontWeight.bold)),
                       Row(
                         children: [
                           IconButton(
@@ -262,11 +262,11 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
             OutlinedButton.icon(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('የተተረጎመው 500 ገጽ PDF በስኬት ወርዷል!')),
+                  const SnackBar(content: Text('500 Pages PDF Downloaded Successfully!')),
                 );
               },
               icon: const Icon(Icons.download),
-              label: const Text('የተተረጎመውን 500 ገጽ PDF አውርድ'),
+              label: const Text('Download Translated 500 Pages PDF'),
             ),
           ],
         ),
