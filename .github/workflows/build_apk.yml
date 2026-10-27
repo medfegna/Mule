@@ -15,11 +15,23 @@ jobs:
           channel: 'stable'
       - name: Create Android Platform
         run: flutter create . --platforms=android --project-name=mule
-      - name: Fix Kotlin Version
+      - name: Fix Kotlin Version with Python
         run: |
-          find android -name "settings.gradle" -exec sed -i 's/version "1.7.1"/version "1.9.0"/g' {} +
-          find android -name "settings.gradle" -exec sed -i 's/version "1.8.22"/version "1.9.0"/g' {} +
-          find android -name "build.gradle" -exec sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.0"/g' {} +
+          python3 -c '
+          import glob
+          for path in glob.glob("android/**/settings.gradle", recursive=True):
+              with open(path, "r") as f:
+                  content = f.read()
+              content = content.replace("1.7.1", "1.9.0").replace("1.8.22", "1.9.0")
+              with open(path, "w") as f:
+                  f.write(content)
+          for path in glob.glob("android/**/build.gradle", recursive=True):
+              with open(path, "r") as f:
+                  content = f.read()
+              content = content.replace("1.7.1", "1.9.0").replace("1.8.22", "1.9.0")
+              with open(path, "w") as f:
+                  f.write(content)
+          '
       - name: Build APK
         run: flutter build apk --release
       - name: Upload APK Artifact
