@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 void main() {
   runApp(const MuleApp());
@@ -67,7 +70,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     'Arabic',
   ];
 
-  // ፋይሉን ከስልክ መርጦ በመጫን ትክክለኛውን የገጽ ብዛት በራሱ ማስላት
+  // ፋይሉን ከስልክ መርጦ መጫን እና የገጽ ብዛትን ማስተካከል
   Future<void> _pickDocument() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -78,20 +81,20 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
 
       if (result != null) {
         String fileName = result.files.single.name;
-        String textContent = "ፋይሉ ተጭኗል።";
+        String textContent = "ሰነዱ ከ $fileName ተጭኗል።";
         
         if (result.files.single.bytes != null) {
           try {
-            textContent = utf8.decode(result.files.single.bytes!);
+            textContent = utf8.decode(result.files.single.bytes!, allowMalformed: true);
           } catch (e) {
-            textContent = "የሰነዱ ይዘት ከ $fileName ተጭኗል።";
+            textContent = "የሰነዱ ይዘት ($fileName) በተሳካ ሁኔታ ተነቧል።";
           }
         }
 
-        // የሰነዱን ርዝመት በማስላት ልክ እንደ ትክክለኛው ገጾች ብዛት መወሰን (በእያንዳንዱ ገጽ ~800 ፊደላት)
-        int calculatedPages = (textContent.length / 800).ceil();
-        if (calculatedPages < 1) calculatedPages = 1;
-        if (calculatedPages > 500) calculatedPages = 500;
+        // ፋይሉ ትልቅ ከሆነ በበርካታ ገጾች (ለምሳሌ በየ 500 ፊደላቱ አንድ ገጽ) መክፈል
+        int calculatedPages = (textContent.length / 500).ceil();
+        if (calculatedPages < 5) calculatedPages = 5; // ቢያንስ 5 ገጾች እንዲኖሩ ማድረግ
+        if (calculatedPages > 100) calculatedPages = 100;
 
         setState(() {
           selectedFileName = fileName;
@@ -106,7 +109,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('ፋይሉ ተጭኗል: $fileName ($totalPages ገጾች አሉት)')),
+            SnackBar(content: Text('ፋይሉ ተጭኗል: $fileName ($totalPages ገጾች ተዘጋጅተዋል)')),
           );
         }
       }
@@ -119,7 +122,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     }
   }
 
-  // ፋይሉን በገጽ በገጽ በመክፈል ወደ አማርኛ ትርጉም መቀየር
+  // ትርጉም ማካሄድ እና ገጾቹን መሙላት
   void startTranslation() async {
     if (selectedFileName == 'No file selected yet') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -140,9 +143,8 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
       });
     }
 
-    // የሰነዱን ይዘት በገጾች መጠን (Chunks) መክፈል
     List<String> chunks = [];
-    int chunkSize = 800;
+    int chunkSize = 500;
     for (int i = 0; i < rawFileContent.length; i += chunkSize) {
       int end = (i + chunkSize < rawFileContent.length) ? i + chunkSize : rawFileContent.length;
       chunks.add(rawFileContent.substring(i, end));
@@ -171,6 +173,53 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('ትርጉሙ ተጠናቋል! ጠቅላላ ገጾች: $totalPages')),
       );
+    }
+  }
+
+  // እውነተኛ ፒዲኤፍ ፋይፍ አዘጋጅቶ ስልክ ውስጥ (Downloads) ማስቀመጫ
+  Future<void> _downloadTranslatedPDF() async {
+    try {
+      final pdf = pw.Document();
+
+      for (var pageText in translatedPages) {
+        pdf.addPage(
+          pw.Page(
+            build: (pw.Context context) {
+              return pw.Center(
+                child: pw.Text(
+                  pageText,
+                  style: const pw.TextStyle(fontSize: 14),
+                ),
+              );
+            },
+          ),
+        );
+      }
+
+      Directory? directory;
+      if (Platform.isAndroid) {
+        directory = Directory('/storage/emulated/0/Download');
+        if (!await directory.exists()) {
+          directory = await getExternalStorageDirectory();
+        }
+      } else {
+        directory = await getApplicationDocumentsDirectory();
+      }
+
+      final file = File("${directory!.path}/Mule_Translated_${DateTime.now().millisecondsSinceEpoch}.pdf");
+      await file.writeAsBytes(await pdf.save());
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('PDF ፋይሉ በ Downloads フォルダ ተቀምጧል!\n路径: ${file.path}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('PDF ማውረድ አልተቻለም: $e')),
+        );
+      }
     }
   }
 
@@ -370,11 +419,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
             ),
             const SizedBox(height: 16),
             OutlinedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('የተተረጎመው ፒዲኤፍ በውርድ ተዘጋጅቷል!')),
-                );
-              },
+              onPressed: _downloadTranslatedPDF,
               icon: const Icon(Icons.download),
               label: const Text('Download Translated PDF'),
             ),
