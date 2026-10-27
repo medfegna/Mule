@@ -52,7 +52,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     'Arabic',
   ];
 
-  // እውነተኛውን ፋይል ከስልክ ማከማቻ የመምረጫ ሎጂክ
   Future<void> _pickDocument() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
