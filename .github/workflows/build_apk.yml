@@ -13,6 +13,8 @@ jobs:
         with:
           flutter-version: '3.24.0'
           channel: 'stable'
+      - name: Create Android Platform
+        run: flutter create . --platforms=android --project-name=mule
       - name: Build APK
         run: flutter build apk --release
       - name: Upload APK Artifact
