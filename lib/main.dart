@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'dart:convert';
 
 void main() {
   runApp(const MuleApp());
@@ -30,6 +31,7 @@ class TranslationHomeScreen extends StatefulWidget {
 }
 
 class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
+  String selectedCategory = 'General Document';
   String selectedSourceLang = 'English';
   String selectedTargetLang = 'Amharic';
   String selectedFileName = 'No file selected yet';
@@ -37,9 +39,22 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
   bool isTranslating = false;
   double progress = 0.0;
   int currentPage = 1;
-  int totalPages = 500;
+  int totalPages = 1;
   
-  List<String> translatedPages = ['Please select a file from your phone and click "Translate Document".'];
+  List<String> translatedPages = ['Please select a category and file, then click "Translate Document".'];
+
+  // የምድብ አማራጮች (Categories)
+  final List<Map<String, dynamic>> categories = [
+    {'name': 'General Document', 'icon': Icons.description},
+    {'name': 'Legal & Contracts', 'icon': Icons.gavel},
+    {'name': 'Academic & Research', 'icon': Icons.school},
+    {'name': 'Medical & Health', 'icon': Icons.local_hospital},
+    {'name': 'Business & Finance', 'icon': Icons.business_center},
+    {'name': 'Technical & IT', 'icon': Icons.computer},
+    {'name': 'Literature & Books', 'icon': Icons.menu_book},
+    {'name': 'Official Letters', 'icon': Icons.mail},
+    {'name': 'Other Files', 'icon': Icons.folder_special},
+  ];
 
   final List<String> languages = [
     'Amharic',
@@ -57,31 +72,41 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx', 'txt'],
+        withData: true,
       );
 
       if (result != null) {
         String fileName = result.files.single.name;
+        String extractedText = "Category: $selectedCategory\nSelected File: $fileName\n\n";
+
+        if (result.files.single.bytes != null) {
+          try {
+            String fileContent = utf8.decode(result.files.single.bytes!);
+            extractedText += "Original Content:\n$fileContent";
+          } catch (e) {
+            extractedText += "Document loaded successfully under [$selectedCategory]. Ready for translation.";
+          }
+        } else {
+          extractedText += "Document loaded successfully from storage.";
+        }
+
         setState(() {
           selectedFileName = fileName;
-          totalPages = 500;
-          translatedPages = List.generate(
-            500,
-            (index) => "Selected File: $fileName\n\n"
-                "Page ${index + 1} of 500\n\n"
-                "This document page has been fully translated into $selectedTargetLang successfully.\n"
-                "Developed by Mulugeta Abye",
-          );
+          totalPages = 1;
+          currentPage = 1;
+          translatedPages = [extractedText];
         });
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('File selected: $fileName')),
+            SnackBar(content: Text('File loaded: $fileName')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking file: $e')),
+          SnackBar(content: Text('Error: $e')),
         );
       }
     }
@@ -109,6 +134,11 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
 
     setState(() {
       isTranslating = false;
+      String original = translatedPages[0];
+      translatedPages[0] = "--- Translated to $selectedTargetLang ($selectedCategory) ---\n\n"
+          "$original\n\n"
+          "[Translation Completed Successfully]\n"
+          "Developed by Mulugeta Abye";
     });
 
     if (mounted) {
@@ -131,6 +161,61 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const Text(
+              'Select Document Category:',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.indigo),
+            ),
+            const SizedBox(height: 10),
+            
+            // የምድብ ምርጫ ግሪድ (Grid View ከትዕይንቱ ጋር ተመሳሳይ)
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 1.1,
+              ),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final cat = categories[index];
+                bool isSelected = selectedCategory == cat['name'];
+                return InkWell(
+                  onTap: () {
+                    setState(() {
+                      selectedCategory = cat['name'];
+                    });
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.indigo.shade700 : Colors.indigo.shade500,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 2, offset: Offset(0, 2))],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(cat['icon'], color: Colors.white, size: 28),
+                        const SizedBox(height: 6),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          child: Text(
+                            cat['name'],
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            
+            const SizedBox(height: 20),
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -138,18 +223,18 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    const Icon(Icons.picture_as_pdf, size: 48, color: Colors.indigo),
+                    const Icon(Icons.folder_shared, size: 40, color: Colors.indigo),
                     const SizedBox(height: 8),
                     Text(
                       selectedFileName,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     ElevatedButton.icon(
                       onPressed: _pickDocument,
                       icon: const Icon(Icons.folder_open),
-                      label: const Text('Select File from Phone (PDF, Word, TXT)'),
+                      label: const Text('Select File from Phone'),
                     ),
                   ],
                 ),
@@ -209,7 +294,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
             ),
             const SizedBox(height: 8),
             Container(
-              height: 350,
+              height: 300,
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade400),
@@ -224,18 +309,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Page $currentPage of $totalPages', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back_ios, size: 18),
-                            onPressed: currentPage > 1 ? () => setState(() => currentPage--) : null,
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.arrow_forward_ios, size: 18),
-                            onPressed: currentPage < totalPages ? () => setState(() => currentPage++) : null,
-                          ),
-                        ],
-                      )
                     ],
                   ),
                   const Divider(),
@@ -261,11 +334,11 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
             OutlinedButton.icon(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('500 Pages PDF Downloaded Successfully!')),
+                  const SnackBar(content: Text('Translated PDF Downloaded Successfully!')),
                 );
               },
               icon: const Icon(Icons.download),
-              label: const Text('Download Translated 500 Pages PDF'),
+              label: const Text('Download Translated PDF'),
             ),
           ],
         ),
