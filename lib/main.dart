@@ -69,7 +69,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     'Arabic',
   ];
 
-  // ፋይሉን ከስልክ መርጦ መጫን እና ይዘቱን ማጽዳት
   Future<void> _pickDocument() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -125,7 +124,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     }
   }
 
-  // ትርጉም ማካሄድ
   void startTranslation() async {
     if (selectedFileName == 'No file selected yet') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -179,7 +177,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     }
   }
 
-  // ፒዲኤፍ አዘጋጅቶ ተጠቃሚው የት ማስቀመጥ እንደሚፈልግ የሚመርጥበት ሳጥን (Save As Dialog) ማምጣት
   Future<void> _downloadTranslatedPDF() async {
     try {
       final pdf = pw.Document();
@@ -204,7 +201,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
 
       final Uint8List pdfBytes = await pdf.save();
 
-      // ተጠቃሚው ፋይሉን የት ማዳን (Save) እንደሚፈልግ ራሱ እንዲመርጥ የሚያስችል ሳጥን
       String? outputFile = await FilePicker.platform.saveFile(
         dialogTitle: 'ተተርጎሞ የተዘጋጀውን ፒዲኤፍ የት ይለቀቅ/ይቀመጥ?',
         fileName: 'Mule_Translated_Document.pdf',
@@ -248,7 +244,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
             ),
             const SizedBox(height: 10),
             
-            // የምድብ ምርጫ ግሪድ (Grid View)
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -341,7 +336,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     value: selectedTargetLang,
-                    decoration: const InputDecoration(labelText: 'To', border: Outline.InputBorder()),
+                    decoration: const InputDecoration(labelText: 'To', border: OutlineInputBorder()),
                     items: languages
                         .map((lang) => DropdownMenuItem(value: lang, child: Text(lang, style: const TextStyle(fontSize: 12))))
                         .toList(),
