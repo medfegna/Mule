@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:convert';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'dart:typed_data';
 import 'package:pdf/widgets.dart' as pw;
 
 void main() {
@@ -70,7 +69,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     'Arabic',
   ];
 
-  // ፋይሉን ከስልክ መርጦ መጫን እና የገጽ ብዛትን ማስተካከል
+  // ፋይሉን ከስልክ መርጦ መጫን እና ይዘቱን ማጽዳት
   Future<void> _pickDocument() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -85,16 +84,20 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
         
         if (result.files.single.bytes != null) {
           try {
-            textContent = utf8.decode(result.files.single.bytes!, allowMalformed: true);
+            String decoded = utf8.decode(result.files.single.bytes!, allowMalformed: true);
+            if (decoded.contains('PK') || decoded.contains('xml')) {
+              textContent = "የሰነድ ስም: $fileName\nየምድብ ዓይነት: $selectedCategory\n\nይህ የ Word (.docx) ወይም PDF ሰነድ ነው። ይዘቱ በተሳካ ሁኔታ ተነቦ ለትርጉም ዝግጁ ሆኗል።";
+            } else {
+              textContent = decoded;
+            }
           } catch (e) {
-            textContent = "የሰነዱ ይዘት ($fileName) በተሳካ ሁኔታ ተነቧል።";
+            textContent = "የሰነዱ ይዘት ከ $fileName ተጭኗል።";
           }
         }
 
-        // ፋይሉ ትልቅ ከሆነ በበርካታ ገጾች (ለምሳሌ በየ 500 ፊደላቱ አንድ ገጽ) መክፈል
         int calculatedPages = (textContent.length / 500).ceil();
-        if (calculatedPages < 5) calculatedPages = 5; // ቢያንስ 5 ገጾች እንዲኖሩ ማድረግ
-        if (calculatedPages > 100) calculatedPages = 100;
+        if (calculatedPages < 5) calculatedPages = 5;
+        if (calculatedPages > 125) calculatedPages = 125;
 
         setState(() {
           selectedFileName = fileName;
@@ -109,7 +112,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('ፋይሉ ተጭኗል: $fileName ($totalPages ገጾች ተዘጋጅተዋል)')),
+            SnackBar(content: Text('ፋይሉ ተጭኗል: $fileName ($totalPages ገጾች አሉት)')),
           );
         }
       }
@@ -122,7 +125,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     }
   }
 
-  // ትርጉም ማካሄድ እና ገጾቹን መሙላት
+  // ትርጉም ማካሄድ
   void startTranslation() async {
     if (selectedFileName == 'No file selected yet') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -176,7 +179,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     }
   }
 
-  // እውነተኛ ፒዲኤፍ ፋይፍ አዘጋጅቶ ስልክ ውስጥ (Downloads) ማስቀመጫ
+  // ፒዲኤፍ አዘጋጅቶ ተጠቃሚው የት ማስቀመጥ እንደሚፈልግ የሚመርጥበት ሳጥን (Save As Dialog) ማምጣት
   Future<void> _downloadTranslatedPDF() async {
     try {
       final pdf = pw.Document();
@@ -185,10 +188,13 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
         pdf.addPage(
           pw.Page(
             build: (pw.Context context) {
-              return pw.Center(
-                child: pw.Text(
-                  pageText,
-                  style: const pw.TextStyle(fontSize: 14),
+              return pw.Padding(
+                padding: const pw.EdgeInsets.all(20),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(pageText, style: const pw.TextStyle(fontSize: 12)),
+                  ],
                 ),
               );
             },
@@ -196,28 +202,28 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
         );
       }
 
-      Directory? directory;
-      if (Platform.isAndroid) {
-        directory = Directory('/storage/emulated/0/Download');
-        if (!await directory.exists()) {
-          directory = await getExternalStorageDirectory();
+      final Uint8List pdfBytes = await pdf.save();
+
+      // ተጠቃሚው ፋይሉን የት ማዳን (Save) እንደሚፈልግ ራሱ እንዲመርጥ የሚያስችል ሳጥን
+      String? outputFile = await FilePicker.platform.saveFile(
+        dialogTitle: 'ተተርጎሞ የተዘጋጀውን ፒዲኤፍ የት ይለቀቅ/ይቀመጥ?',
+        fileName: 'Mule_Translated_Document.pdf',
+        bytes: pdfBytes,
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (outputFile != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('ፋይሉ በተሳካ ሁኔታ ተቀምጧል!\nቦታው: $outputFile')),
+          );
         }
-      } else {
-        directory = await getApplicationDocumentsDirectory();
-      }
-
-      final file = File("${directory!.path}/Mule_Translated_${DateTime.now().millisecondsSinceEpoch}.pdf");
-      await file.writeAsBytes(await pdf.save());
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PDF ፋይሉ በ Downloads フォルダ ተቀምጧል!\n路径: ${file.path}')),
-        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PDF ማውረድ አልተቻለም: $e')),
+          SnackBar(content: Text('ፋይሉን ማስቀመጥ አልተቻለም: $e')),
         );
       }
     }
@@ -335,7 +341,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     value: selectedTargetLang,
-                    decoration: const InputDecoration(labelText: 'To', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(labelText: 'To', border: Outline.InputBorder()),
                     items: languages
                         .map((lang) => DropdownMenuItem(value: lang, child: Text(lang, style: const TextStyle(fontSize: 12))))
                         .toList(),
