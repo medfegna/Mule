@@ -70,7 +70,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     'Arabic',
   ];
 
-  // ፋይሉን በትክክለኛ መጠን ማንበብ (ገጾች እንዳያብጡ በ አንቀጽ መከፈል)
   Future<void> _pickDocument() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -87,7 +86,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
         if (fileBytes != null) {
           try {
             extractedText = utf8.decode(fileBytes, allowMalformed: true);
-            // የኮድ ምልክቶችን ማጽዳት
             extractedText = extractedText.replaceAll(RegExp(r'[^\x20-\x7E\nአ-ፚ]'), ' ');
           } catch (e) {
             extractedText = "ፋይል: $fileName\nይዘቱ በተሳካ ሁኔታ ተጭኗል።";
@@ -98,7 +96,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
           extractedText = "ጫኚው ፋይል ባዶ ነው ወይም ጽሁፍ አልተገኘበትም።";
         }
 
-        // ገጾችን በትክክለኛ መጠን መክፈል (በየ 1500 ፊደላት አንድ ትክክለኛ ገጽ)
         List<String> pages = [];
         int pageChars = 1500;
         for (int i = 0; i < extractedText.length; i += pageChars) {
@@ -132,7 +129,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     }
   }
 
-  // የ μετάφራ (Translation) ሂደት
   void startTranslation() async {
     if (selectedFileName == 'No file selected yet') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -153,7 +149,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
       });
     }
 
-    // የተጠቃሚውን ጽሁፍ በ AI Mode ማስተካከል
     List<String> translated = displayPages.map((pageText) {
       return "=== Mule AI Document Translator ($selectedSourceLang -> $selectedTargetLang) ===\n"
           "ፋይል: $selectedFileName | ምድብ: $selectedCategory\n"
@@ -175,7 +170,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     }
   }
 
-  // ፒዲኤፍ ፋይል አከማችቶ ማውረድ (MultiPage በመጠቀም ትክክለኛ የገጽ መጠን እንዲኖረው ማድረግ)
   Future<void> _downloadTranslatedPDF() async {
     try {
       final pdf = pw.Document();
@@ -389,7 +383,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: TextAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween, // እዚህ ጋር MainAxisAlignment ተስተካክሏል
                     children: [
                       Text('ገጽ $currentPage ከ ${displayPages.length}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
                       Row(
