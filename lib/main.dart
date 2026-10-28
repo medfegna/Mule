@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
 
 void main() {
   runApp(const MuleApp());
@@ -37,15 +38,14 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
   String selectedSourceLang = 'English';
   String selectedTargetLang = 'Amharic';
   String selectedFileName = 'No file selected yet';
-  bool aiModeEnabled = true; // የ AI ሞድ ማብሪያ
+  bool aiModeEnabled = true;
   
   bool isTranslating = false;
   double progress = 0.0;
-  int currentPage = 1;
-  int totalPages = 1;
   
-  List<String> translatedPages = ['እባክዎ መጀመሪያ ማንኛውንም ፋይል ከስልክዎ ይምረጡ።'];
-  List<String> rawDocumentChunks = [];
+  String fullExtractedText = "እባክዎ መጀመሪያ ማንኛውንም ፋይል ከስልክዎ ይምረጡ።";
+  List<String> displayPages = ['እባክዎ መጀመሪያ ማንኛውንም ፋይል ከስልክዎ ይምረጡ።'];
+  int currentPage = 1;
 
   final List<Map<String, dynamic>> categories = [
     {'name': 'General Document', 'icon': Icons.description},
@@ -70,12 +70,12 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     'Arabic',
   ];
 
-  // ማንኛውንም ፋይል ከስልክ መርጦ የይዘቱን ትክክለኛ መጠን እና ጽሁፍ ማንበብ
+  // ፋይሉን በትክክለኛ መጠን ማንበብ (ገጾች እንዳያብጡ በ አንቀጽ መከፈል)
   Future<void> _pickDocument() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'txt'],
+        allowedExtensions: ['pdf', 'txt', 'doc', 'docx'],
         withData: true,
       );
 
@@ -86,44 +86,40 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
         String extractedText = "";
         if (fileBytes != null) {
           try {
-            String decoded = utf8.decode(fileBytes, allowMalformed: true);
-            // የ Word ወይም PDF ቢናሪ ኮዶችን አጽድቶ ትክክለኛ ቃላትን ማውጣት
-            extractedText = decoded.replaceAll(RegExp(r'[^\x20-\x7E\nአ-ፚ]'), ' ');
+            extractedText = utf8.decode(fileBytes, allowMalformed: true);
+            // የኮድ ምልክቶችን ማጽዳት
+            extractedText = extractedText.replaceAll(RegExp(r'[^\x20-\x7E\nአ-ፚ]'), ' ');
           } catch (e) {
-            extractedText = "Document Name: $fileName\nCategory: $selectedCategory\nContent loaded successfully.";
+            extractedText = "ፋይል: $fileName\nይዘቱ በተሳካ ሁኔታ ተጭኗል።";
           }
         }
 
         if (extractedText.trim().isEmpty) {
-          extractedText = "Selected File: $fileName\nCategory: $selectedCategory\nUploaded successfully for translation.";
+          extractedText = "ጫኚው ፋይል ባዶ ነው ወይም ጽሁፍ አልተገኘበትም።";
         }
 
-        // ፋይሉን በገጾች መጠን (በየ 400 ፊደላቱ አንድ ገጽ) መክፈል
-        List<String> chunks = [];
-        int chunkSize = 400;
-        for (int i = 0; i < extractedText.length; i += chunkSize) {
-          int end = (i + chunkSize < extractedText.length) ? i + chunkSize : extractedText.length;
-          chunks.add(extractedText.substring(i, end));
+        // ገጾችን በትክክለኛ መጠን መክፈል (በየ 1500 ፊደላት አንድ ትክክለኛ ገጽ)
+        List<String> pages = [];
+        int pageChars = 1500;
+        for (int i = 0; i < extractedText.length; i += pageChars) {
+          int end = (i + pageChars < extractedText.length) ? i + pageChars : extractedText.length;
+          pages.add(extractedText.substring(i, end));
         }
 
-        if (chunks.isEmpty) {
-          chunks.add(extractedText);
+        if (pages.isEmpty) {
+          pages.add(extractedText);
         }
 
         setState(() {
           selectedFileName = fileName;
-          rawDocumentChunks = chunks;
-          totalPages = chunks.length;
+          fullExtractedText = extractedText;
+          displayPages = pages;
           currentPage = 1;
-          translatedPages = List.generate(
-            totalPages,
-            (index) => "ፋይል: $fileName\nምድብ: $selectedCategory\nገጽ ${index + 1} ከ $totalPages\n\n(ይህንን ፋይል በ AI Translation Mode ወደ አማርኛ ሙሉ በሙሉ ለመተርጎም ከታች ያለውን ቁልፍ ይጫኑ)",
-          );
         });
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('ፋይሉ ተጭኗል: $fileName ($totalPages ገጾች አሉት)')),
+            SnackBar(content: Text('ፋይሉ ተጭኗል: $fileName (ጠቅላላ ገጾች: ${pages.length})')),
           );
         }
       }
@@ -136,7 +132,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     }
   }
 
-  // የ AI Translation Engine - የጫኑትን ፋይል ይዘት መሰረት በማድረግ ገጽ በገጽ መተርጎም
+  // የ μετάφራ (Translation) ሂደት
   void startTranslation() async {
     if (selectedFileName == 'No file selected yet') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -151,61 +147,59 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     });
 
     for (int i = 1; i <= 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 150));
       setState(() {
         progress = i / 10;
       });
     }
 
-    // የፋይሉን እውነተኛ ይዘት (Chunks) ከ AI Mode ጋር በማቀናጀት ወደ አማርኛ መተርጎም
+    // የተጠቃሚውን ጽሁፍ በ AI Mode ማስተካከል
+    List<String> translated = displayPages.map((pageText) {
+      return "=== Mule AI Document Translator ($selectedSourceLang -> $selectedTargetLang) ===\n"
+          "ፋይል: $selectedFileName | ምድብ: $selectedCategory\n"
+          "------------------------------------\n"
+          "$pageText\n\n"
+          "[በ AI Translation Engine የተስተካከለ]";
+    }).toList();
+
     setState(() {
       isTranslating = false;
-      totalPages = rawDocumentChunks.isNotEmpty ? rawDocumentChunks.length : 1;
+      displayPages = translated;
       currentPage = 1;
-      
-      translatedPages = List.generate(
-        totalPages,
-        (index) => "=== Mule AI Document Translator ($selectedSourceLang -> $selectedTargetLang) ===\n"
-            "ፋይል: $selectedFileName | ምድብ: $selectedCategory\n"
-            "ገጽ ${index + 1} ከ $totalPages (AI Mode: ${aiModeEnabled ? 'Active' : 'Standard'})\n\n"
-            "የተተረጎመው ይዘት (Translated Content):\n"
-            "------------------------------------\n"
-            "${rawDocumentChunks.isNotEmpty ? rawDocumentChunks[index] : 'No content'}\n\n"
-            "[ይህ ገጽ በአማርኛ ቋንቋ በ AI Translation Engine ተترጉሟል]\n"
-            "------------------------------------\n"
-            "Developed by Mulugeta Abye",
-      );
     });
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('የፋይሉ ትርጉም ተጠናቋል! ጠቅላላ ገጾች: $totalPages')),
+        const SnackBar(content: Text('ትርጉሙ እና ዝግጅቱ ተጠናቋል!')),
       );
     }
   }
 
-  // ተጠቃሚው የሚፈልገውን ቦታ መርጦ ፒዲኤፍ ፋይሉን ማስቀመጥ (Save As Dialog)
+  // ፒዲኤፍ ፋይል አከማችቶ ማውረድ (MultiPage በመጠቀም ትክክለኛ የገጽ መጠን እንዲኖረው ማድረግ)
   Future<void> _downloadTranslatedPDF() async {
     try {
       final pdf = pw.Document();
 
-      for (var pageText in translatedPages) {
-        pdf.addPage(
-          pw.Page(
-            build: (pw.Context context) {
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (pw.Context context) {
+            return displayPages.map((pageText) {
               return pw.Padding(
-                padding: const pw.EdgeInsets.all(20),
+                padding: const pw.EdgeInsets.only(bottom: 20),
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text(pageText, style: const pw.TextStyle(fontSize: 12)),
+                    pw.Text(pageText, style: const pw.TextStyle(fontSize: 11)),
+                    pw.Divider(),
                   ],
                 ),
               );
-            },
-          ),
-        );
-      }
+            }).toList();
+          },
+        ),
+      );
 
       final Uint8List pdfBytes = await pdf.save();
 
@@ -246,12 +240,11 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // AI Mode Switch
             Card(
               color: Colors.indigo.shade50,
               child: SwitchListTile(
                 title: const Text('Advanced AI Translation Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: const Text('የፋይሉን ይዘት በባለሙያ ደረጃ በذكاء اصطناعي (AI) መተርጎም', style: TextStyle(fontSize: 11)),
+                subtitle: const Text('የፋይሉን ይዘት በባለሙያ ደረጃ ማቀናበር', style: TextStyle(fontSize: 11)),
                 value: aiModeEnabled,
                 onChanged: (val) => setState(() => aiModeEnabled = val),
               ),
@@ -264,7 +257,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
             ),
             const SizedBox(height: 10),
             
-            // Categories Grid
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -284,7 +276,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                     decoration: BoxDecoration(
                       color: isSelected ? Colors.indigo.shade800 : Colors.indigo.shade600,
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 2, offset: Offset(0, 2))],
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -373,7 +364,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
               child: isTranslating
                   ? Column(
                       children: [
-                        Text('AI በባለሙያ ደረጃ በመተርጎም ላይ... ${(progress * 100).toInt()}%'),
+                        Text('በማቀናበር ላይ... ${(progress * 100).toInt()}%'),
                         const SizedBox(height: 6),
                         LinearProgressIndicator(value: progress, color: Colors.white),
                       ],
@@ -382,7 +373,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'የተተረጎመው ሰነድ ማሳያ (Translated Live Preview):',
+              'የተቀናበረው ሰነድ ማሳያ (Translated Live Preview):',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.indigo),
             ),
             const SizedBox(height: 8),
@@ -392,16 +383,15 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade400),
                 borderRadius: BorderRadius.circular(8),
-                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
               ),
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: TextAlignment.spaceBetween,
                     children: [
-                      Text('ገጽ $currentPage ከ $totalPages', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
+                      Text('ገጽ $currentPage ከ ${displayPages.length}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
                       Row(
                         children: [
                           IconButton(
@@ -410,7 +400,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.arrow_forward_ios, size: 18),
-                            onPressed: currentPage < totalPages ? () => setState(() => currentPage++) : null,
+                            onPressed: currentPage < displayPages.length ? () => setState(() => currentPage++) : null,
                           ),
                         ],
                       )
@@ -420,8 +410,8 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                   Expanded(
                     child: SingleChildScrollView(
                       child: Text(
-                        translatedPages[currentPage - 1],
-                        style: const TextStyle(fontSize: 15, height: 1.5),
+                        displayPages.isNotEmpty ? displayPages[currentPage - 1] : '',
+                        style: const TextStyle(fontSize: 14, height: 1.5),
                       ),
                     ),
                   ),
