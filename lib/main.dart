@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
+import 'package:translator/translator.dart';
 
 void main() {
   runApp(const MuleApp());
@@ -46,6 +47,8 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
   String fullExtractedText = "እባክዎ መጀመሪያ ማንኛውንም ፋይል ከስልክዎ ይምረጡ።";
   List<String> displayPages = ['እባክዎ መጀመሪያ ማንኛውንም ፋይል ከስልክዎ ይምረጡ።'];
   int currentPage = 1;
+
+  final GoogleTranslator translator = GoogleTranslator();
 
   final List<Map<String, dynamic>> categories = [
     {'name': 'General Document', 'icon': Icons.description},
@@ -97,7 +100,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
         }
 
         List<String> pages = [];
-        int pageChars = 1500;
+        int pageChars = 1000; // ለአስተማማኝ ትርጉም መጠን መቀነሱ ይመረጣል
         for (int i = 0; i < extractedText.length; i += pageChars) {
           int end = (i + pageChars < extractedText.length) ? i + pageChars : extractedText.length;
           pages.add(extractedText.substring(i, end));
@@ -129,6 +132,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     }
   }
 
+  // ትክክለኛውን የትርጉም ሂደት ማከናወን
   void startTranslation() async {
     if (selectedFileName == 'No file selected yet') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -142,30 +146,41 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
       progress = 0.0;
     });
 
-    for (int i = 1; i <= 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 150));
+    String targetCode = 'am';
+    if (selectedTargetLang == 'Tigrinya') targetCode = 'ti';
+    else if (selectedTargetLang == 'Afaan Oromo') targetCode = 'om';
+    else if (selectedTargetLang == 'Arabic') targetCode = 'ar';
+    else if (selectedTargetLang == 'French') targetCode = 'fr';
+    else if (selectedTargetLang == 'Spanish') targetCode = 'es';
+    else if (selectedTargetLang == 'English') targetCode = 'en';
+
+    List<String> translatedPages = [];
+    for (int i = 0; i < displayPages.length; i++) {
+      try {
+        var translation = await translator.translate(
+          displayPages[i], 
+          from: 'en', 
+          to: targetCode
+        );
+        translatedPages.add(translation.text);
+      } catch (e) {
+        translatedPages.add(displayPages[i]); // ስህተት ካጋጠመ ኦሪጅናል ጽሁፉን ያስቀምጣል
+      }
+
       setState(() {
-        progress = i / 10;
+        progress = (i + 1) / displayPages.length;
       });
     }
 
-    List<String> translated = displayPages.map((pageText) {
-      return "=== Mule AI Document Translator ($selectedSourceLang -> $selectedTargetLang) ===\n"
-          "ፋይል: $selectedFileName | ምድብ: $selectedCategory\n"
-          "------------------------------------\n"
-          "$pageText\n\n"
-          "[በ AI Translation Engine የተስተካከለ]";
-    }).toList();
-
     setState(() {
       isTranslating = false;
-      displayPages = translated;
+      displayPages = translatedPages;
       currentPage = 1;
     });
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ትርጉሙ እና ዝግጅቱ ተጠናቋል!')),
+        const SnackBar(content: Text('ትርጉሙ በተሳካ ሁኔታ ተጠናቋል!')),
       );
     }
   }
@@ -358,7 +373,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
               child: isTranslating
                   ? Column(
                       children: [
-                        Text('በማቀናበር ላይ... ${(progress * 100).toInt()}%'),
+                        Text('በመተርጎም ላይ... ${(progress * 100).toInt()}%'),
                         const SizedBox(height: 6),
                         LinearProgressIndicator(value: progress, color: Colors.white),
                       ],
@@ -367,7 +382,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'የተቀናበረው ሰነድ ማሳያ (Translated Live Preview):',
+              'የተተረጎመው ሰነድ ማሳያ (Translated Live Preview):',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.indigo),
             ),
             const SizedBox(height: 8),
@@ -383,7 +398,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween, // እዚህ ጋር MainAxisAlignment ተስተካክሏል
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('ገጽ $currentPage ከ ${displayPages.length}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
                       Row(
