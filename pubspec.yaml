@@ -1,25 +1,22 @@
 name: mule
-description: A new Flutter project.
+description: "A new Flutter project."
 publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.3.0 <4.0.0'
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
   file_picker: ^8.0.0
   pdf: ^3.10.8
-  path_provider: ^2.1.2
+  translator: ^0.1.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-dependencies:
-  flutter:
-    sdk: flutter
-  file_picker: ^8.0.0
-  pdf: ^3.10.8
-  translator: ^0.1.1  #
+
+flutter:
+  uses-material-design: true
