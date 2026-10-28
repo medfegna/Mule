@@ -100,7 +100,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
         }
 
         List<String> pages = [];
-        int pageChars = 1000; // ለአስተማማኝ ትርጉም መጠን መቀነሱ ይመረጣል
+        int pageChars = 1000;
         for (int i = 0; i < extractedText.length; i += pageChars) {
           int end = (i + pageChars < extractedText.length) ? i + pageChars : extractedText.length;
           pages.add(extractedText.substring(i, end));
@@ -132,7 +132,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     }
   }
 
-  // ትክክለኛውን የትርጉም ሂደት ማከናወን
+  // የተስተካከለ እና አስተማማኝ የትርጉም ሂደት (በትንንሽ ክፍሎች በመክፈል)
   void startTranslation() async {
     if (selectedFileName == 'No file selected yet') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -155,16 +155,33 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
     else if (selectedTargetLang == 'English') targetCode = 'en';
 
     List<String> translatedPages = [];
+    bool hasError = false;
+
     for (int i = 0; i < displayPages.length; i++) {
       try {
-        var translation = await translator.translate(
-          displayPages[i], 
-          from: 'en', 
-          to: targetCode
-        );
-        translatedPages.add(translation.text);
+        String pageText = displayPages[i];
+        
+        // ጽሁፉን በበለጠ ትናንሽ ክፍሎች (በየ 400 ፊደላት) በመክፈል መተርጎም
+        List<String> subParts = [];
+        for (int j = 0; j < pageText.length; j += 400) {
+          int end = (j + 400 < pageText.length) ? j + pageNamesEnd(j, pageText.length) : pageText.length;
+          // ቀላል ማስተካከያ ለ end index
+          int safeEnd = (j + 400 < pageText.length) ? j + 400 : pageText.length;
+          subParts.add(pageText.substring(j, safeEnd));
+        }
+
+        String translatedPage = '';
+        for (var part in subParts) {
+          var translation = await translator.translate(part, from: 'en', to: targetCode);
+          translatedPage += ' ${translation.text}';
+          await Future.delayed(const Duration(milliseconds: 150)); // ኤፒአይ እንዳይጣበቅ ማገጃ
+        }
+
+        translatedPages.add(translatedPage);
       } catch (e) {
-        translatedPages.add(displayPages[i]); // ስህተት ካጋጠመ ኦሪጅናል ጽሁፉን ያስቀምጣል
+        hasError = true;
+        // ስህተት ካጋጠመ የማስጠንቀቂያ ጽሁፍ ከኦሪጅናሉ ጋር ይጨምራል
+        translatedPages.add("--- [የትርጉም ማስታወሻ: የኔትወርክ መቆራረጥ አጋጥሟል] ---\n${displayPages[i]}");
       }
 
       setState(() {
@@ -180,9 +197,15 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ትርጉሙ በተሳካ ሁኔታ ተጠናቋል!')),
+        SnackBar(
+          content: Text(hasError ? 'አንዳንድ ክፍሎች መترጎም አልቻሉም። ኔትወርክዎን ይፈትሹ!' : 'ትርጉሙ በተሳካ ሁኔታ ተጠናቋል!'),
+        ),
       );
     }
+  }
+
+  int pageNamesEnd(int j, int length) {
+    return j + 400 < length ? j + 400 : length;
   }
 
   Future<void> _downloadTranslatedPDF() async {
