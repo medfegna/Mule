@@ -22,4 +22,4 @@ dependencies:
     sdk: flutter
   file_picker: ^8.0.0
   pdf: ^3.10.8
-  translator: ^0.1.1  # <-- ይህንን መስመር ይጨምሩ
+  translator: ^0.1.1  #
