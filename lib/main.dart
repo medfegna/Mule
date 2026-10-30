@@ -15,58 +15,25 @@ void main() {
   runApp(const MuleApp());
 }
 
-class MuleApp extends StatefulWidget {
+class MuleApp extends StatelessWidget {
   const MuleApp({super.key});
-
-  @override
-  State<MuleApp> createState() => _MuleAppState();
-}
-
-class _MuleAppState extends State<MuleApp> {
-  ThemeData currentTheme = ThemeData(
-    primarySwatch: Colors.indigo,
-    useMaterial3: true,
-  );
-  Color primaryColor = Colors.indigo;
-  Color backgroundColor = Colors.indigo.shade50;
-
-  void changeTheme(Color color, MaterialColor primarySwatch) {
-    setState(() {
-      primaryColor = color;
-      backgroundColor = primarySwatch.shade50;
-      currentTheme = ThemeData(
-        primarySwatch: primarySwatch,
-        useMaterial3: true,
-      );
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Mule AI Document Translator',
-      theme: currentTheme,
-      home: TranslationHomeScreen(
-        onThemeChanged: changeTheme,
-        primaryColor: primaryColor,
-        backgroundColor: backgroundColor,
+      theme: ThemeData(
+        primarySwatch: Colors.indigo,
+        useMaterial3: true,
       ),
+      home: const TranslationHomeScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
 }
 
 class TranslationHomeScreen extends StatefulWidget {
-  final Function(Color, MaterialColor) onThemeChanged;
-  final Color primaryColor;
-  final Color backgroundColor;
-
-  const TranslationHomeScreen({
-    super.key,
-    required this.onThemeChanged,
-    required this.primaryColor,
-    required this.backgroundColor,
-  });
+  const TranslationHomeScreen({super.key});
 
   @override
   State<TranslationHomeScreen> createState() => _TranslationHomeScreenState();
@@ -104,7 +71,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
   final GoogleTranslator translator = GoogleTranslator();
   final ImagePicker _imagePicker = ImagePicker();
 
-  // ማስታወሻ: የራስዎን Gemini API Key እዚህ ያስገቡ
+  // የጂሚኒ ኤፒአይ ቁልፍዎ (እዚህ ጋር ያስገቡ)
   final String geminiApiKey = "YOUR_GEMINI_API_KEY_HERE"; 
 
   final List> categories = [
@@ -225,7 +192,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
     });
 
     List<String> translatedPages = [];
-    bool hasError = false;
+    bool hasError = false; // በትክክለኛው መልኩ የተገለጸ ቫሪያብል
 
     try {
       final model = GenerativeModel(
@@ -420,34 +387,13 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: widget.backgroundColor,
       appBar: AppBar(
         title: const Text('Mule AI Document Translator'),
         centerTitle: true,
-        backgroundColor: widget.primaryColor.withOpacity(0.2),
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.color_lens),
-            onSelected: (value) {
-              if (value == 'indigo') widget.onThemeChanged(Colors.indigo, Colors.indigo);
-              else if (value == 'teal') widget.onThemeChanged(Colors.teal, Colors.teal);
-              else if (value == 'orange') widget.onThemeChanged(Colors.deepOrange, Colors.deepOrange);
-              else if (value == 'purple') widget.onThemeChanged(Colors.purple, Colors.purple);
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'indigo', child: Text('Indigo Theme (Classic)')),
-              const PopupMenuItem(value: 'teal', child: Text('Teal Theme (Fresh)')),
-              const PopupMenuItem(value: 'orange', child: Text('Sunset Orange')),
-              const PopupMenuItem(value: 'purple', child: Text('Royal Purple')),
-            ],
-          ),
-        ],
+        backgroundColor: Colors.indigo.shade100,
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          labelColor: widget.primaryColor,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: widget.primaryColor,
           tabs: const [
             Tab(icon: Icon(Icons.folder), text: 'ፋይል (AI File)'),
             Tab(icon: Icon(Icons.paste), text: 'ኮፒ/ፔስት (Paste)'),
@@ -466,7 +412,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Card(
-                  color: widget.primaryColor.withOpacity(0.08),
+                  color: Colors.indigo.shade50,
                   child: SwitchListTile(
                     title: const Text('Advanced AI Translation Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     subtitle: const Text('የፋይሉን ይዘት በባለሙያ ደረጃ ማቀናበር', style: TextStyle(fontSize: 11)),
@@ -486,23 +432,26 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
                   itemCount: categories.length,
                   itemBuilder: (context, index) {
                     final cat = categories[index];
-                    bool isSelected = selectedCategory == cat['name'];
+                    final catName = cat['name'] as String;
+                    final catIcon = cat['icon'] as IconData;
+                    bool isSelected = selectedCategory == catName;
+
                     return InkWell(
-                      onTap: () => setState(() => selectedCategory = cat['name']),
+                      onTap: () => setState(() => selectedCategory = catName),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: isSelected ? widget.primaryColor : widget.primaryColor.withOpacity(0.7),
+                          color: isSelected ? Colors.indigo.shade800 : Colors.indigo.shade600,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(cat['icon'], color: Colors.white, size: 26),
+                            Icon(catIcon, color: Colors.white, size: 26),
                             const SizedBox(height: 4),
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 4.0),
                               child: Text(
-                                cat['name'],
+                                catName,
                                 style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                                 textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
                               ),
@@ -557,7 +506,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
                 const SizedBox(height: 16),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: widget.primaryColor,
+                    backgroundColor: Colors.indigo,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
@@ -608,7 +557,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('ገጽ $currentPage ከ ${displayPages.length}', style: TextStyle(fontWeight: FontWeight.bold, color: widget.primaryColor)),
+                          Text('ገጽ $currentPage ከ ${displayPages.length}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
                           Row(
                             children: [
                               IconButton(
@@ -662,7 +611,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
                 ),
                 const SizedBox(height: 12),
                 ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: widget.primaryColor, foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
                   onPressed: translatePastedText,
                   icon: const Icon(Icons.translate),
                   label: const Text('Analyze & Translate Text'),
@@ -707,13 +656,13 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: widget.primaryColor, foregroundColor: Colors.white),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
                       onPressed: () => _pickImage(ImageSource.camera),
                       icon: const Icon(Icons.camera_alt),
                       label: const Text('Camera'),
                     ),
                     ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: widget.primaryColor, foregroundColor: Colors.white),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
                       onPressed: () => _pickImage(ImageSource.gallery),
                       icon: const Icon(Icons.image),
                       label: const Text('Gallery'),
@@ -772,7 +721,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isListening ? Colors.red : widget.primaryColor,
+                    backgroundColor: _isListening ? Colors.red : Colors.indigo,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   ),
