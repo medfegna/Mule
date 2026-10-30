@@ -71,10 +71,10 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
   final GoogleTranslator translator = GoogleTranslator();
   final ImagePicker _imagePicker = ImagePicker();
 
-  // የጂሚኒ ኤፒአይ ቁልፍዎ (እዚህ ጋር ያስገቡ)
-  final String geminiApiKey = "YOUR_GEMINI_API_KEY_HERE"; 
+  // 🔑 የሰጡት ትክክለኛ የጂሚኒ ኤፒአይ ቁልፍ እዚህ ገብቷል
+  final String geminiApiKey = "AQ.Ab8RN6LZZQdQJE-PA03Xj5DOi3ZsddVNWNfrJZp8_6p0tNxlGQ"; 
 
-  // የካቴጎሪ ዝርዝር (ከስህተት ነፃ በሆነ መልኩ የተስተካከለ)
+  // የካቴጎሪ ዝርዝር
   final categories = [
     {'name': 'General Document', 'icon': Icons.description},
     {'name': 'Legal & Contracts', 'icon': Icons.gavel},
