@@ -8,3 +8,5 @@ dependencies:
   pdf: ^3.10.4
   translator: ^1.0.2
   google_generative_ai: ^0.4.6 # አዲሱ የጂሚኒ ኤፒአይ ፓኬጅ
+environment:
+  sdk: '>=3.0.0 <4.0.0'
