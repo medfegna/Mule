@@ -72,7 +72,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
   final ImagePicker _imagePicker = ImagePicker();
 
   // 🔑 የሰጡት ትክክለኛ የጂሚኒ ኤፒአይ ቁልፍ እዚህ ገብቷል
-  final String geminiApiKey = "AQ.Ab8RN6LZZQdQJE-PA03Xj5DOi3ZsddVNWNfrJZp8_6p0tNxlGQ"; 
+final String geminiApiKey = "AQ.Ab8RN6JGF5Rfu6UnSKitOm956cEW4Nb49ghNNTVVYETv-AozYw";
 
   // የካቴጎሪ ዝርዝር
   final categories = [
