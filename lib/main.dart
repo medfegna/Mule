@@ -72,7 +72,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
   final ImagePicker _imagePicker = ImagePicker();
 
   // 🔑 የሰጡት ትክክለኛ የጂሚኒ ኤፒአይ ቁልፍ እዚህ ገብቷል
-final String geminiApiKey = "AQ.Ab8RN6JGF5Rfu6UnSKitOm956cEW4Nb49ghNNTVVYETv-AozYw";
+  final String geminiApiKey = "AQ.Ab8RN6JGF5Rfu6UnSKitOm956cEW4Nb49ghNNTVVYETv-AozYw"; 
 
   // የካቴጎሪ ዝርዝር
   final categories = [
@@ -193,7 +193,6 @@ final String geminiApiKey = "AQ.Ab8RN6JGF5Rfu6UnSKitOm956cEW4Nb49ghNNTVVYETv-Aoz
     });
 
     List<String> translatedPages = [];
-    bool hasError = false;
 
     try {
       final model = GenerativeModel(
@@ -228,40 +227,58 @@ final String geminiApiKey = "AQ.Ab8RN6JGF5Rfu6UnSKitOm956cEW4Nb49ghNNTVVYETv-Aoz
           progress = (i + 1) / displayPages.length;
         });
       }
-    } catch (e) {
-      hasError = true;
-      for (var page in displayPages) {
-        var trans = await translator.translate(page, to: getTargetCode(selectedTargetLang));
-        translatedPages.add("--- [የትርጉም ማስታወሻ] ---\n${trans.text}");
+
+      setState(() {
+        isTranslating = false;
+        displayPages = translatedPages;
+        currentPage = 1;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('AI ትንተና እና ትርጉም በተሳካ ሁኔታ ተጠናቋል!')),
+        );
       }
-    }
-
-    setState(() {
-      isTranslating = false;
-      displayPages = translatedPages;
-      currentPage = 1;
-    });
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(hasError ? 'በኔትወርክ ወይም ኤፒአይ ችግር በመደበኛ ተተርጉሟል!' : 'AI ትንተና እና ትርጉም በተሳካ ሁኔታ ተጠናቋል!')),
-      );
+    } catch (e) {
+      setState(() {
+        isTranslating = false;
+      });
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('የስህተት ዝርዝር (Error)'),
+            content: Text('AI ትርጉም አልተሳካም:\n$e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('እሺ'),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
 
   void translatePastedText() async {
     if (_pasteController.text.trim().isEmpty) return;
+    
+    setState(() {
+      pastedTranslatedText = "በመተርጎም ላይ... እባክዎ ይጠብቁ...";
+    });
+
     try {
       final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: geminiApiKey);
       final prompt = 'Analyze and translate the following text into $selectedTargetLang with key points and full translation:\n${_pasteController.text}';
       final response = await model.generateContent([Content.text(prompt)]);
+      
       setState(() {
         pastedTranslatedText = response.text ?? 'ትርጉም አልተገኘም';
       });
     } catch (e) {
-      var trans = await translator.translate(_pasteController.text, to: getTargetCode(selectedTargetLang));
       setState(() {
-        pastedTranslatedText = trans.text;
+        pastedTranslatedText = "ስህተት አጋጥሟል:\n$e";
       });
     }
   }
