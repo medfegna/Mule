@@ -1,3 +1,11 @@
+name: mule
+description: A new Flutter translation application.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
 dependencies:
   flutter:
     sdk: flutter
@@ -7,6 +15,7 @@ dependencies:
   speech_to_text: ^6.6.0
   pdf: ^3.10.4
   translator: ^1.0.2
-  google_generative_ai: ^0.4.6 # አዲሱ የጂሚኒ ኤፒአይ ፓኬጅ
-environment:
-  sdk: '>=3.0.0 <4.0.0'
+  google_generative_ai: ^0.4.6
+
+flutter:
+  uses-material-design: true
