@@ -74,7 +74,8 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
   // የጂሚኒ ኤፒአይ ቁልፍዎ (እዚህ ጋር ያስገቡ)
   final String geminiApiKey = "YOUR_GEMINI_API_KEY_HERE"; 
 
-  final List> categories = [
+  // የካቴጎሪ ዝርዝር (ከስህተት ነፃ በሆነ መልኩ የተስተካከለ)
+  final categories = [
     {'name': 'General Document', 'icon': Icons.description},
     {'name': 'Legal & Contracts', 'icon': Icons.gavel},
     {'name': 'Academic & Research', 'icon': Icons.school},
@@ -192,7 +193,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
     });
 
     List<String> translatedPages = [];
-    bool hasError = false; // በትክክለኛው መልኩ የተገለጸ ቫሪያብል
+    bool hasError = false;
 
     try {
       final model = GenerativeModel(
