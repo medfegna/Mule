@@ -7,7 +7,6 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:io';
-import 'package:translator/translator.dart';
 
 void main() {
   runApp(const MuleApp());
@@ -55,7 +54,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
   String pastedTranslatedText = '';
 
   File? _pickedImage;
-  String imageExtractedText = '';
   String imageTranslatedText = '';
 
   late stt.SpeechToText _speech;
@@ -64,15 +62,14 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
   String translatedVoiceText = '';
   final FlutterTts _flutterTts = FlutterTts();
 
-  final GoogleTranslator translator = GoogleTranslator();
   final ImagePicker _imagePicker = ImagePicker();
 
   // 🔑 የጂሚኒ ኤፒአይ ቁልፍ
   final String geminiApiKey = "AQ.Ab8RN6JGF5Rfu6UnSKitOm956cEW4Nb49ghNNTVVYETv-AozYw"; 
 
-  // ለፍጥነት እና ደህንነት የተመረጠው እጅግ ፈጣኑ ሞዴል (gemini-1.5-flash-8b)
+  // ሁልጊዜ አስተማማኝ እና ፈጣን የሆነው gemini-pro ሞዴል
   GenerativeModel get _aiModel => GenerativeModel(
-        model: 'gemini-1.5-flash-8b',
+        model: 'gemini-pro',
         apiKey: geminiApiKey,
       );
 
@@ -118,7 +115,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
             extractedText = utf8.decode(fileBytes, allowMalformed: true);
             extractedText = extractedText.replaceAll(RegExp(r'[^\x20-\x7E\nአ-ፚ]'), ' ');
           } catch (e) {
-            extractedText = "ፋይል: $fileName\nይዘቱ ተጭኗል። እባክዎ ትርጉም ይጀምሩ።";
+            extractedText = "ፋይል: $fileName\nይዘቱ ተጭኗል።";
           }
         }
 
@@ -159,7 +156,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
     try {
       String textToTranslate = fullExtractedText;
       if (textToTranslate.length > 2500) {
-        textToTranslate = textToTranslate.substring(0, 2500); // ለፍጥነት እና ሰርቨር ላለመጫን
+        textToTranslate = textToTranslate.substring(0, 2500);
       }
 
       String prompt = 'Translate and summarize this text into $selectedTargetLang under category "$selectedCategory":\n$textToTranslate';
@@ -339,8 +336,8 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
                   onPressed: isTranslating ? null : startTranslation,
                   child: isTranslating
-                      ? const Row(mainAxisAlignment: MainAxisAlignment.center, children: [CircularProgressIndicator(color: Colors.white), SizedBox(width: 12), Text('በፍጥነት በመተርጎም ላይ...')])
-                      : const Text('Analyze & Translate Fast', style: TextStyle(fontSize: 16)),
+                      ? const Row(mainAxisAlignment: MainAxisAlignment.center, children: [CircularProgressIndicator(color: Colors.white), SizedBox(width: 12), Text('በመተርጎም ላይ...')])
+                      : const Text('Analyze & Translate', style: TextStyle(fontSize: 16)),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -376,7 +373,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
                   onPressed: translatePastedText,
                   icon: const Icon(Icons.translate),
-                  label: const Text('Translate Text Fast'),
+                  label: const Text('Translate Text'),
                 ),
                 const SizedBox(height: 16),
                 Expanded(
