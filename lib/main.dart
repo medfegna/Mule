@@ -67,9 +67,9 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
   // 🔑 የጂሚኒ ኤፒአይ ቁልፍ
   final String geminiApiKey = "AQ.Ab8RN6JGF5Rfu6UnSKitOm956cEW4Nb49ghNNTVVYETv-AozYw"; 
 
-  // ሁልጊዜ አስተማማኝ እና ፈጣን የሆነው gemini-pro ሞዴል
+  // አስተማማኝ እና ፈጣኑ የ gemini-1.5-flash ሞዴል
   GenerativeModel get _aiModel => GenerativeModel(
-        model: 'gemini-pro',
+        model: 'gemini-1.5-flash',
         apiKey: geminiApiKey,
       );
 
@@ -280,7 +280,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          // 1. ፋይል ታብ
           SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -356,8 +355,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
               ],
             ),
           ),
-
-          // 2. ጽሁፍ ኮፒ ፔስት
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -386,8 +383,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
               ],
             ),
           ),
-
-          // 3. ካሜራ OCR
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -413,10 +408,8 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
               ],
             ),
           ),
-
-          // 4. ድምፅ ሪከርድ (Voice)
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: constပြင်صall(16.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
