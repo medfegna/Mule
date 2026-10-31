@@ -12,7 +12,7 @@ dependencies:
   google_generative_ai: ^0.4.7
   file_picker: ^8.0.0
   image_picker: ^1.0.7
-  flutter_tts: ^4.0.2
+  flutter_tts: ^3.8.5
   speech_to_text: ^6.6.0
   pdf: ^3.10.8
 
