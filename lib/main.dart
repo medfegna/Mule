@@ -47,12 +47,11 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
   String selectedSourceLang = 'English';
   String selectedTargetLang = 'Amharic';
   String selectedFileName = 'No file selected yet';
-  bool aiModeEnabled = true;
   bool isTranslating = false;
   double progress = 0.0;
   
-  String fullExtractedText = "እባክዎ መጀመሪያ ማንኛውንም ፋይል ከስልክዎ ይምረጡ።";
-  List<String> displayPages = ['እባክዎ መጀመሪያ ማንኛውንም ፋይል ከስልክዎ ይምረጡ።'];
+  String fullExtractedText = "እባክዎ መጀመሪያ ፋይል ይምረጡ።";
+  List<String> displayPages = ['እባክዎ መጀመሪያ ፋይል ይምረጡ።'];
   int currentPage = 1;
 
   final TextEditingController _pasteController = TextEditingController();
@@ -74,7 +73,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
   // 🔑 የጂሚኒ ኤፒአይ ቁልፍ
   final String geminiApiKey = "AQ.Ab8RN6JGF5Rfu6UnSKitOm956cEW4Nb49ghNNTVVYETv-AozYw"; 
 
-  // የካቴጎሪ ዝርዝር
   final categories = [
     {'name': 'General Document', 'icon': Icons.description},
     {'name': 'Legal & Contracts', 'icon': Icons.gavel},
@@ -108,22 +106,6 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
     _speech = stt.SpeechToText();
   }
 
-  String getTargetCode(String lang) {
-    switch (lang) {
-      case 'Tigrinya': return 'ti';
-      case 'Afaan Oromo': return 'om';
-      case 'Arabic': return 'ar';
-      case 'French': return 'fr';
-      case 'Spanish': return 'es';
-      case 'English': return 'en';
-      case 'Italian': return 'it';
-      case 'German': return 'de';
-      case 'Chinese': return 'zh-cn';
-      case 'Afar': return 'aa';
-      default: return 'am';
-    }
-  }
-
   Future<void> _pickDocument() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -140,29 +122,21 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
         if (fileBytes != null) {
           try {
             extractedText = utf8.decode(fileBytes, allowMalformed: true);
+            // ጽሁፉን ከቆሻሻ ምልክቶች ማጽዳት
             extractedText = extractedText.replaceAll(RegExp(r'[^\x20-\x7E\nአ-ፚ]'), ' ');
           } catch (e) {
-            extractedText = "ፋይል: $fileName\nይዘቱ በተሳካ ሁኔታ ተጭኗል።";
+            extractedText = "ፋይል: $fileName\nይዘቱ ተጭኗል። እባክዎ በቀጥታ ትርጉም ይጀምሩ።";
           }
         }
 
-        if (extractedText.trim().isEmpty) {
-          extractedText = "ጫኚው ፋይል ባዶ ነው ወይም ጽሁፍ አልተገኘበትም።";
+        if (extractedText.trim().isEmpty || extractedText.length < 10) {
+          extractedText = "ፋይሉ ተጭኗል ($fileName)። እባክዎ Analyze ቁልፍን ይጫኑ።";
         }
-
-        List<String> pages = [];
-        int pageChars = 1500;
-        for (int i = 0; i < extractedText.length; i += pageChars) {
-          int end = (i + pageChars < extractedText.length) ? i + pageChars : extractedText.length;
-          pages.add(extractedText.substring(i, end));
-        }
-
-        if (pages.isEmpty) pages.add(extractedText);
 
         setState(() {
           selectedFileName = fileName;
           fullExtractedText = extractedText;
-          displayPages = pages;
+          displayPages = [extractedText];
           currentPage = 1;
         });
 
@@ -189,10 +163,8 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
 
     setState(() {
       isTranslating = true;
-      progress = 0.0;
+      progress = 0.3;
     });
-
-    List<String> translatedPages = [];
 
     try {
       final model = GenerativeModel(
@@ -200,43 +172,31 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
         apiKey: geminiApiKey,
       );
 
-      for (int i = 0; i < displayPages.length; i++) {
-        String pageText = displayPages[i];
-
-        String prompt = '''
-          You are an expert AI translator and analyst. Analyze the following text under the category "$selectedCategory".
-          Provide your response in $selectedTargetLang following this professional structure:
-          1. Brief Analysis / Summary of the text (ጥልቅ ትንተና ወይም ማጠቃለያ)
-          2. Key Points in bullet points (ዋና ዋና ነጥቦች)
-          3. Full structured Translation (የጽሁፍ ትርጉም)
-          
-          Text to process:
-          $pageText
-        ''';
-
-        final content = [Content.text(prompt)];
-        final response = await model.generateContent(content);
-
-        if (response.text != null) {
-          translatedPages.add(response.text!);
-        } else {
-          translatedPages.add(pageText);
-        }
-
-        setState(() {
-          progress = (i + 1) / displayPages.length;
-        });
+      String textToTranslate = fullExtractedText;
+      if (textToTranslate.length > 3000) {
+        textToTranslate = textToTranslate.substring(0, 3000); // ለፍጥነት እና ለግንኙነት መቋረጥ እንዳይጋለጥ ማሳጠር
       }
+
+      String prompt = '''
+        Translate and analyze this text into $selectedTargetLang under category "$selectedCategory". 
+        Provide clear summary, key points, and translation:
+        $textToTranslate
+      ''';
+
+      setState(() => progress = 0.6);
+
+      final response = await model.generateContent([Content.text(prompt)]);
 
       setState(() {
         isTranslating = false;
-        displayPages = translatedPages;
+        progress = 1.0;
+        displayPages = [response.text ?? 'ትርጉም አልተገኘም።'];
         currentPage = 1;
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('AI ትንተና እና ትርጉም በተሳካ ሁኔታ ተጠናቋል!')),
+          const SnackBar(content: Text('ትርጉም በተሳካ ሁኔታ ተጠናቋል!')),
         );
       }
     } catch (e) {
@@ -248,7 +208,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('የስህተት ዝርዝር (Error)'),
-            content: Text('AI ትርጉም አልተሳካም:\n$e'),
+            content: Text('ትርጉም አልተሳካም:\n$e'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -270,7 +230,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
 
     try {
       final model = GenerativeModel(model: 'gemini-flash-latest', apiKey: geminiApiKey);
-      final prompt = 'Analyze and translate the following text into $selectedTargetLang with key points and full translation:\n${_pasteController.text}';
+      final prompt = 'Translate into $selectedTargetLang with key points:\n${_pasteController.text}';
       final response = await model.generateContent([Content.text(prompt)]);
       
       setState(() {
@@ -288,8 +248,8 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
     if (image != null) {
       setState(() {
         _pickedImage = File(image.path);
-        imageExtractedText = "ከፎቶው ላይ ጽሁፍ በማውጣት ላይ...";
-        imageTranslatedText = "በጂሚኒ AI በመተንተን ላይ...";
+        imageExtractedText = "ፎቶው እየተነበበ ነው...";
+        imageTranslatedText = "በመተርጎም ላይ...";
       });
 
       try {
@@ -299,43 +259,55 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
         final response = await model.generateContent([
           Content.multi([
             DataPart('image/jpeg', bytes), 
-            TextPart('Extract text from this image, summarize it, and translate it into $selectedTargetLang with key points.')
+            TextPart('Extract text from this image and translate it into $selectedTargetLang with key points.')
           ])
         ]);
 
         setState(() {
-          imageExtractedText = "ፎቶው በተሳካ ሁኔታ ተነቧል።";
+          imageExtractedText = "ፎቶው ተነቧል።";
           imageTranslatedText = response.text ?? 'ትርጉም አልተገኘም።';
         });
       } catch (e) {
         setState(() {
-          imageTranslatedText = "የስህተት ዝርዝር: $e";
+          imageTranslatedText = "ስህተት: $e";
         });
       }
     }
   }
 
   void _listenVoice() async {
-    if (!_isListening) {
-      bool available = await _speech.initialize();
-      if (available) {
-        setState(() => _isListening = true);
-        _speech.listen(
-          onResult: (val) async {
-            setState(() => recordedText = val.recognizedWords);
-            if (val.recognizedWords.isNotEmpty) {
-              final model = GenerativeModel(model: 'gemini-flash-latest', apiKey: geminiApiKey);
-              final response = await model.generateContent([Content.text('Translate and explain this spoken text in $selectedTargetLang: ${val.recognizedWords}')]);
-              setState(() {
-                translatedVoiceText = response.text ?? '';
-              });
-            }
-          },
+    try {
+      if (!_isListening) {
+        bool available = await _speech.initialize(
+          onStatus: (status) => print('status: $status'),
+          onError: (error) => print('error: $error'),
         );
+        if (available) {
+          setState(() => _isListening = true);
+          _speech.listen(
+            onResult: (val) async {
+              setState(() => recordedText = val.recognizedWords);
+              if (val.recognizedWords.isNotEmpty) {
+                final model = GenerativeModel(model: 'gemini-flash-latest', apiKey: geminiApiKey);
+                final response = await model.generateContent([Content.text('Translate into $selectedTargetLang: ${val.recognizedWords}')]);
+                setState(() {
+                  translatedVoiceText = response.text ?? '';
+                });
+              }
+            },
+          );
+        } else {
+          setState(() => recordedText = "ማይክራፎን መጠቀም አልተቻለም።");
+        }
+      } else {
+        setState(() => _isListening = false);
+        _speech.stop();
       }
-    } else {
-      setState(() => _isListening = false);
-      _speech.stop();
+    } catch (e) {
+      setState(() {
+        _isListening = false;
+        recordedText = "የድምፅ ስህተት: $e";
+      });
     }
   }
 
@@ -345,61 +317,13 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
     if (selectedTargetLang == 'English') langCode = 'en-US';
     else if (selectedTargetLang == 'Arabic') langCode = 'ar-SA';
     else if (selectedTargetLang == 'French') langCode = 'fr-FR';
-    else if (selectedTargetLang == 'Spanish') langCode = 'es-ES';
 
     await _flutterTts.setLanguage(langCode);
-    await _flutterTts.setPitch(1.0);
-    await _flutterTts.setSpeechRate(0.5);
     await _flutterTts.speak(text);
   }
 
   Future<void> _stopSpeaking() async {
     await _flutterTts.stop();
-  }
-
-  Future<void> _downloadTranslatedPDF() async {
-    try {
-      final pdf = pw.Document();
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(32),
-          build: (pw.Context context) {
-            return displayPages.map((pageText) {
-              return pw.Padding(
-                padding: const pw.EdgeInsets.only(bottom: 20),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(pageText, style: const pw.TextStyle(fontSize: 11)),
-                    pw.Divider(),
-                  ],
-                ),
-              );
-            }).toList();
-          },
-        ),
-      );
-
-      final Uint8List pdfBytes = await pdf.save();
-      String? outputFile = await FilePicker.platform.saveFile(
-        dialogTitle: 'ተተርጎሞ የተዘጋጀውን ፒዲኤፍ ማስቀመጫ ቦታ ይምረጡ',
-        fileName: 'Mule_Translated_${DateTime.now().millisecondsSinceEpoch}.pdf',
-        bytes: pdfBytes,
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
-      );
-
-      if (outputFile != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ፋይሉ ተቀምጧል: $outputFile')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('ስህተት: $e')));
-      }
-    }
   }
 
   @override
@@ -429,56 +353,13 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Card(
-                  color: Colors.indigo.shade50,
-                  child: SwitchListTile(
-                    title: const Text('Advanced AI Translation Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    subtitle: const Text('የፋይሉን ይዘት በባለሙያ ደረጃ ማቀናበር', style: TextStyle(fontSize: 11)),
-                    value: aiModeEnabled,
-                    onChanged: (val) => setState(() => aiModeEnabled = val),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text('Select Document Category:', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                const Text('የፋይል ምድብ ይምረጡ:', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: 1.1,
-                  ),
-                  itemCount: categories.length,
-                  itemBuilder: (context, index) {
-                    final cat = categories[index];
-                    final catName = cat['name'] as String;
-                    final catIcon = cat['icon'] as IconData;
-                    bool isSelected = selectedCategory == catName;
-
-                    return InkWell(
-                      onTap: () => setState(() => selectedCategory = catName),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isSelected ? Colors.indigo.shade800 : Colors.indigo.shade600,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(catIcon, color: Colors.white, size: 26),
-                            const SizedBox(height: 4),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                              child: Text(
-                                catName,
-                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  decoration: const InputDecoration(border: OutlineInputBorder()),
+                  items: categories.map((cat) => DropdownMenuItem(value: cat['name'] as String, child: Text(cat['name'] as String))).toList(),
+                  onChanged: (val) => setState(() => selectedCategory = val!),
                 ),
                 const SizedBox(height: 16),
                 Card(
@@ -530,80 +411,40 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
                   ),
                   onPressed: isTranslating ? null : startTranslation,
                   child: isTranslating
-                      ? Column(
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('በጂሚኒ AI በመተንተን ላይ... ${(progress * 100).toInt()}%'),
-                            const SizedBox(height: 4),
-                            LinearProgressIndicator(value: progress, color: Colors.white),
+                            const CircularProgressIndicator(color: Colors.white),
+                            const SizedBox(width: 12),
+                            Text('በመተርጎም ላይ... ${(progress * 100).toInt()}%'),
                           ],
                         )
-                      : const Text('Analyze & Translate with Gemini AI', style: TextStyle(fontSize: 16)),
+                      : const Text('Analyze & Translate Fast', style: TextStyle(fontSize: 16)),
                 ),
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('የጂሚኒ ትንተና እና የትርጉም ውጤት:', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.volume_up, color: Colors.indigo),
-                          onPressed: () => _speakText(displayPages[currentPage - 1]),
-                          tooltip: 'ያንብብልኝ',
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.stop, color: Colors.red),
-                          onPressed: _stopSpeaking,
-                          tooltip: 'አቁም',
-                        ),
-                      ],
+                    const Text('የትርጉም ውጤት:', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    IconButton(
+                      icon: const Icon(Icons.volume_up, color: Colors.indigo),
+                      onPressed: () => _speakText(displayPages[0]),
+                      tooltip: 'ያንብብልኝ',
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  height: 320,
+                  height: 300,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     border: Border.all(color: Colors.grey.shade400),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('ገጽ $currentPage ከ ${displayPages.length}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.arrow_back_ios, size: 16),
-                                onPressed: currentPage > 1 ? () => setState(() => currentPage--) : null,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                                onPressed: currentPage < displayPages.length ? () => setState(() => currentPage++) : null,
-                              ),
-                            ],
-                          )
-                        ],
-                      ),
-                      const Divider(),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Text(displayPages.isNotEmpty ? displayPages[currentPage - 1] : '', style: const TextStyle(fontSize: 13, height: 1.4)),
-                        ),
-                      ),
-                    ],
+                  child: SingleChildScrollView(
+                    child: Text(displayPages.isNotEmpty ? displayPages[0] : '', style: const TextStyle(fontSize: 13, height: 1.4)),
                   ),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _downloadTranslatedPDF,
-                  icon: const Icon(Icons.download),
-                  label: const Text('Save Translated PDF'),
                 ),
                 const SizedBox(height: 10),
                 const Center(child: Text('Developed by Mulugeta Abye', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 11))),
@@ -611,7 +452,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
             ),
           ),
 
-          // 2. ጽሁፍ ኮፒ ፔስት አድርጎ መተርጎም
+          // 2. ጽሁፍ ኮፒ ፔስት
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -622,39 +463,20 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
                 TextField(
                   controller: _pasteController,
                   maxLines: 5,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter or paste text here...',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(hintText: 'Enter text here...', border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 12),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
                   onPressed: translatePastedText,
                   icon: const Icon(Icons.translate),
-                  label: const Text('Analyze & Translate Text'),
+                  label: const Text('Translate Text Fast'),
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('የትርጉም ውጤት:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    IconButton(
-                      icon: const Icon(Icons.volume_up, color: Colors.indigo),
-                      onPressed: () => _speakText(pastedTranslatedText),
-                      tooltip: 'ያንብብልኝ',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey.shade300)),
                     child: SingleChildScrollView(
                       child: Text(pastedTranslatedText.isEmpty ? 'ትርጉሙ እዚህ ይታያል...' : pastedTranslatedText, style: const TextStyle(fontSize: 15)),
                     ),
@@ -664,7 +486,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
             ),
           ),
 
-          // 3. ካሜራ እና ምስል AI OCR
+          // 3. ካሜራ OCR
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -689,25 +511,8 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
                 ),
                 const SizedBox(height: 12),
                 if (_pickedImage != null)
-                  SizedBox(
-                    height: 100,
-                    child: Image.file(_pickedImage!, fit: BoxFit.cover),
-                  ),
+                  SizedBox(height: 80, child: Image.file(_pickedImage!, fit: BoxFit.cover)),
                 const SizedBox(height: 12),
-                const Text('የተገኘው ጽሁፍ ሁኔታ:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(imageExtractedText, style: const TextStyle(color: Colors.black87)),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('የጂሚኒ ትንተና እና ትርጉም:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    IconButton(
-                      icon: const Icon(Icons.volume_up, color: Colors.indigo),
-                      onPressed: () => _speakText(imageTranslatedText),
-                      tooltip: 'ያንብብልኝ',
-                    ),
-                  ],
-                ),
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.all(8),
@@ -719,61 +524,32 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
             ),
           ),
 
-          // 4. ድምፅ ሪከርድ እና ትርጉም
+          // 4. ድምፅ ሪከርድ (Voice)
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  _isListening ? Icons.mic : Icons.mic_none,
-                  size: 64,
-                  color: _isListening ? Colors.red : Colors.indigo,
-                ),
+                Icon(_isListening ? Icons.mic : Icons.mic_none, size: 64, color: _isListening ? Colors.red : Colors.indigo),
                 const SizedBox(height: 16),
-                Text(
-                  _isListening ? "🎙️ እያዳመጥኩ ነው... ይናገሩ..." : recordedText,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                ),
+                Text(recordedText, textAlign: TextAlign.center, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _isListening ? Colors.red : Colors.indigo,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   ),
                   onPressed: _listenVoice,
                   icon: Icon(_isListening ? Icons.stop : Icons.mic),
-                  label: Text(_isListening ? 'መቅረጽ አቁም' : 'ድምፅ መቅረጽ ጀምር'),
+                  label: Text(_isListening ? 'ማቆም' : 'ድምፅ መቅረጽ ጀምር'),
                 ),
                 const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('የትርጉም ውጤት:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    IconButton(
-                      icon: const Icon(Icons.volume_up, color: Colors.indigo),
-                      onPressed: () => _speakText(translatedVoiceText),
-                      tooltip: 'ያንብብልኝ',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  width: double.infinity,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: SingleChildScrollView(
-                    child: Text(
-                      translatedVoiceText.isEmpty ? 'የድምፅ ትርጉሙ እዚህ ይታያል...' : translatedVoiceText,
-                      style: const TextStyle(fontSize: 15),
-                    ),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    width: double.infinity,
+                    decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey.shade300)),
+                    child: SingleChildScrollView(child: Text(translatedVoiceText, style: const TextStyle(fontSize: 15))),
                   ),
                 ),
               ],
