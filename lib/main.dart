@@ -67,9 +67,9 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
   // 🔑 የጂሚኒ ኤፒአይ ቁልፍ
   final String geminiApiKey = "AQ.Ab8RN6JGF5Rfu6UnSKitOm956cEW4Nb49ghNNTVVYETv-AozYw"; 
 
-  // አስተማማኝ እና ፈጣኑ የ gemini-1.5-flash ሞዴል
+  // 🤖 የተጠየቀው gemini-pro ሞዴል
   GenerativeModel get _aiModel => GenerativeModel(
-        model: 'gemini-1.5-flash',
+        model: 'gemini-pro',
         apiKey: geminiApiKey,
       );
 
@@ -409,7 +409,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
             ),
           ),
           Padding(
-            padding: constပြင်صall(16.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
