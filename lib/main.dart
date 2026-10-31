@@ -71,7 +71,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
   final GoogleTranslator translator = GoogleTranslator();
   final ImagePicker _imagePicker = ImagePicker();
 
-  // 🔑 የሰጡት ትክክለኛ የጂሚኒ ኤፒአይ ቁልፍ እዚህ ገብቷል
+  // 🔑 የጂሚኒ ኤፒአይ ቁልፍ
   final String geminiApiKey = "AQ.Ab8RN6JGF5Rfu6UnSKitOm956cEW4Nb49ghNNTVVYETv-AozYw"; 
 
   // የካቴጎሪ ዝርዝር
@@ -196,7 +196,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
 
     try {
       final model = GenerativeModel(
-        model: 'gemini-1.5-flash',
+        model: 'gemini-flash-latest',
         apiKey: geminiApiKey,
       );
 
@@ -269,7 +269,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
     });
 
     try {
-      final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: geminiApiKey);
+      final model = GenerativeModel(model: 'gemini-flash-latest', apiKey: geminiApiKey);
       final prompt = 'Analyze and translate the following text into $selectedTargetLang with key points and full translation:\n${_pasteController.text}';
       final response = await model.generateContent([Content.text(prompt)]);
       
@@ -294,7 +294,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
 
       try {
         final bytes = await image.readAsBytes();
-        final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: geminiApiKey);
+        final model = GenerativeModel(model: 'gemini-flash-latest', apiKey: geminiApiKey);
         
         final response = await model.generateContent([
           Content.multi([
@@ -324,7 +324,7 @@ class _TranslationHomeScreenState extends State<TranslationHomeScreen>
           onResult: (val) async {
             setState(() => recordedText = val.recognizedWords);
             if (val.recognizedWords.isNotEmpty) {
-              final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: geminiApiKey);
+              final model = GenerativeModel(model: 'gemini-flash-latest', apiKey: geminiApiKey);
               final response = await model.generateContent([Content.text('Translate and explain this spoken text in $selectedTargetLang: ${val.recognizedWords}')]);
               setState(() {
                 translatedVoiceText = response.text ?? '';
